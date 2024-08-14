@@ -1,0 +1,319 @@
+
+from google.colab import drive
+drive.mount('/content/gdrive')
+
+
+
+
+
+
+
+!python -m pip install --upgrade pip
+
+!pip install tensorflow
+
+!pip install tensorboard
+
+
+
+
+!pip install torch
+
+
+
+
+import torch
+from IPython.display import Image
+
+
+
+
+!git clone https://github.com/ultralytics/yolov5
+
+
+
+
+
+
+
+%cd yolov5
+
+
+
+
+
+
+!pip install -r requirements.txt
+
+
+
+
+
+
+
+###Par1 - Use pre-trained Yolov5
+
+!python detect.py --weights yolov5m.pt --conf-thres 0.7 --source /content/gdrive/MyDrive/DL_projects_colab/tehran.png
+
+
+
+Image('runs/detect/exp2/tehran.png')
+
+!python detect.py --source /content/gdrive/MyDrive/DL_projects_colab/videos/driving_camera3.mp4
+
+
+!python detect.py --source /content/gdrive/MyDrive/DL_projects_colab/tehran.png --classes 0 3
+
+Image('runs/detect/exp4/tehran.png')
+
+
+
+
+
+
+###part 2
+
+import os
+from random import choice
+import shutil
+
+imgs =[]
+xmls =[]
+
+train_path = '/content/yolov5/data/images/train'
+val_path = '/content/yolov5/data/images/val'
+source_path = '/content/gdrive/MyDrive/DL_projects_colab/dataset'
+
+if not os.path.exists(train_path):
+  os.mkdir(train_path)
+if not os.path.exists(val_path):
+  os.mkdir(val_path)
+
+train_ratio = 0.8
+val_ratio = 0.2
+
+#total count of imgs
+totalImgCount = len(os.listdir(source_path))/2
+
+#soring files to corresponding arrays
+for (dirname, dirs, files) in os.walk(source_path):
+    for filename in files:
+        if filename.endswith('.txt'):
+            xmls.append(filename)
+        else:
+            imgs.append(filename)
+
+
+#counting range for cycles
+countForTrain = int(len(imgs)*train_ratio)
+countForVal = int(len(imgs)*val_ratio)
+print("training images are : ",countForTrain)
+print("Validation images are : ",countForVal)
+
+
+
+
+
+
+imgs =[]
+xmls =[]
+
+train_path = '/content/yolov5/data/images/train'
+val_path = '/content/yolov5/data/images/val'
+source_path = '/content/gdrive/MyDrive/DL_projects_colab/dataset'
+
+
+
+
+#soring files to corresponding arrays
+for (dirname, dirs, files) in os.walk('/content/yolov5/data/labels/train'):
+    for filename in files:
+      print(filename)
+      os.remove(os.path.join(dirname,filename))
+
+
+
+
+
+trainimagePath = '/content/yolov5/data/images/train'
+trainlabelPath =  '/content/yolov5/data/labels/train'
+valimagePath = '/content/yolov5/data/images/val'
+vallabelPath = '/content/yolov5/data/labels/val'
+
+if not os.path.exists(trainimagePath):
+  os.mkdir(trainimagePath)
+if not os.path.exists(trainlabelPath):
+  os.mkdir(trainlabelPath)
+if not os.path.exists(valimagePath):
+  os.mkdir(valimagePath)
+if not os.path.exists(vallabelPath):
+  os.mkdir(vallabelPath)
+
+for x in range(countForTrain):
+
+    fileJpg = choice(imgs) # get name of random image from origin dir
+    fileXml = fileJpg[:-4] +'.txt' # get name of corresponding annotation file
+
+    #move both files into train dir
+    #shutil.move(os.path.join(crsPath, fileJpg), os.path.join(trainimagePath, fileJpg))
+    #shutil.move(os.path.join(crsPath, fileXml), os.path.join(trainlabelPath, fileXml))
+    shutil.copy(os.path.join(source_path, fileJpg), os.path.join(trainimagePath, fileJpg))
+    shutil.copy(os.path.join(source_path, fileXml), os.path.join(trainlabelPath, fileXml))
+
+
+    #remove files from arrays
+    imgs.remove(fileJpg)
+    xmls.remove(fileXml)
+
+
+#cycle for test dir   
+for x in range(countForVal):
+
+    fileJpg = choice(imgs) # get name of random image from origin dir
+    fileXml = fileJpg[:-4] +'.txt' # get name of corresponding annotation file
+
+    #move both files into train dir
+
+    shutil.copy(os.path.join(source_path, fileJpg), os.path.join(valimagePath, fileJpg))
+    shutil.copy(os.path.join(source_path, fileXml), os.path.join(vallabelPath, fileXml))
+    
+    #remove files from arrays
+    imgs.remove(fileJpg)
+    xmls.remove(fileXml)
+
+#rest of files will be validation files, so rename origin dir to val dir
+#os.rename(crsPath, valPath)
+#shutil.move(source_path, val_path) 
+
+
+
+
+
+
+
+shutil.copy('/content/gdrive/MyDrive/DL_projects_colab/dataset.yaml', '/content/yolov5/data/dataset.yaml')
+
+
+!python train.py --img 415 --batch 16 --epochs 30 --data dataset.yaml --weights yolov5s.pt --cache
+
+
+
+
+%load_ext tensorboard
+%tensorboard --logdir runs
+
+
+!python detect.py --source /content/gdrive/MyDrive/DL_projects_colab/traffic_sign_2.jpg --weights /content/yolov5/runs/train/exp2/weights/best.pt
+
+
+Image('/content/yolov5/runs/detect/exp7/traffic_sign_2.jpg')
+
+
+!python train.py --img 415 --batch 16 --epochs 30 --data dataset.yaml --weights yolov5l.pt --cache
+
+
+
+
+%load_ext tensorboard
+%tensorboard --logdir runs
+
+!python detect.py --source /content/gdrive/MyDrive/DL_projects_colab/traffic_sign_2.jpg --weights /content/yolov5/runs/train/exp3/weights/best.pt
+
+
+
+Image('/content/yolov5/runs/detect/exp8/traffic_sign_2.jpg')
+
+
+
+####Part 3 _ My own dataset
+
+!pip install roboflow
+
+
+
+from roboflow import Roboflow
+rf = Roboflow(api_key="VdwBRxsJsFmCMW94xJjd")
+project = rf.workspace("object-detection-yolov5").project("face_n_nums")
+dataset = project.version(1).download("yolov5")
+
+
+!python train.py --img 416 --batch 16 --epochs 60 --data /content/yolov5/Face_n_nums-1/data.yaml --weights yolov5m.pt --cache
+
+
+
+%load_ext tensorboard
+%tensorboard --logdir runs
+
+
+from IPython.display import display, Javascript
+from google.colab.output import eval_js
+from base64 import b64decode
+
+def take_photo(filename='photo.jpg', quality=0.8):
+  js = Javascript('''
+    async function takePhoto(quality) {
+      const div = document.createElement('div');
+      const capture = document.createElement('button');
+      capture.textContent = 'Capture';
+      div.appendChild(capture);
+
+      const video = document.createElement('video');
+      video.style.display = 'block';
+      const stream = await navigator.mediaDevices.getUserMedia({video: true});
+
+      document.body.appendChild(div);
+      div.appendChild(video);
+      video.srcObject = stream;
+      await video.play();
+
+      // Resize the output to fit the video element.
+      google.colab.output.setIframeHeight(document.documentElement.scrollHeight, true);
+
+      // Wait for Capture to be clicked.
+      await new Promise((resolve) => capture.onclick = resolve);
+
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      canvas.getContext('2d').drawImage(video, 0, 0);
+      stream.getVideoTracks()[0].stop();
+      div.remove();
+      return canvas.toDataURL('image/jpeg', quality);
+    }
+    ''')
+  display(js)
+  data = eval_js('takePhoto({})'.format(quality))
+  binary = b64decode(data.split(',')[1])
+  with open(filename, 'wb') as f:
+    f.write(binary)
+  return filename
+
+
+
+
+
+
+from IPython.display import Image
+try:
+  filename = take_photo()
+  print('Saved to {}'.format(filename))
+
+  # Show the image which was just taken.
+  display(Image(filename))
+except Exception as err:
+  # Errors will be thrown if the user does not have a webcam or if they do not
+  # grant the page permission to access it.
+  print(str(err))
+
+
+
+
+!python detect.py --source photo.jpg 
+
+!python detect.py --source 0
+
+
+
+
+
+
